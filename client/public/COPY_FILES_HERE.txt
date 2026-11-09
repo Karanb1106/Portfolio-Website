@@ -1,0 +1,5 @@
+// Copy this file: 
+// C:/Users/HP/.gemini/antigravity/brain/eaa2363e-66ab-4b5a-a71b-b0d94b380bb0/.user_uploaded/media_1794076433686_0759413e.jpg
+// To: client/public/profile.jpg
+// Also add your resume PDF as: client/public/resume.pdf
+

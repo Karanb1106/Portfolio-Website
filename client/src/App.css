@@ -1,0 +1,22 @@
+.App {
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Toast customization */
+.Toastify__toast {
+  background: #111126 !important;
+  border: 1px solid rgba(79, 142, 247, 0.2) !important;
+  color: #f0f0ff !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+  border-radius: 12px !important;
+}
+
+.Toastify__progress-bar {
+  background: linear-gradient(135deg, #4f8ef7, #8b5cf6) !important;
+}
+
+.Toastify__close-button {
+  color: #a0a0c0 !important;
+}
+
