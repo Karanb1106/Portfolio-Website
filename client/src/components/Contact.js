@@ -5,6 +5,8 @@ import { toast } from 'react-toastify';
 import axios from 'axios';
 import './Contact.css';
 
+const API_BASE_URL = (process.env.REACT_APP_API_URL || '').replace(/\/+$/, '');
+
 const socialLinks = [
   {
     name: 'LinkedIn',
@@ -45,7 +47,7 @@ const Contact = () => {
     }
     setSending(true);
     try {
-      const res = await axios.post('/api/contact', form);
+      const res = await axios.post(`${API_BASE_URL}/api/contact`, form);
       if (res.data.emailSent) {
         toast.success(res.data.message || 'Message sent! 🎉');
       } else {
