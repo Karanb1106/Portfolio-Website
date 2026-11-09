@@ -14,9 +14,13 @@ app.use(cors({
 app.use(express.json());
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/portfolio')
+const mongoUri = (process.env.MONGODB_URI || 'mongodb://localhost:27017/portfolio')
+  .trim()
+  .replace(/^(mongodb(?:\+srv)?:\/\/[^/?#]+)\/{2,}/i, '$1/');
+
+mongoose.connect(mongoUri)
   .then(() => console.log('✅ MongoDB Connected'))
-  .catch(err => console.log('❌ MongoDB Error:', err));
+  .catch(err => console.error('❌ MongoDB Error:', err.message));
 
 // Contact Schema
 const contactSchema = new mongoose.Schema({
