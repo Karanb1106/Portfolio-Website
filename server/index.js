@@ -17,31 +17,38 @@ app.use(
 app.use(express.json());
 
 // MongoDB Connection
-const normalizeMongoUri = (uri) => {
-  const match = uri
-    .trim()
-    .match(/^(mongodb(?:\+srv)?:\/\/[^/?#]+)(?:\/[^?#]*)?(\?[^#]*)?$/i);
-  if (!match) {
-    throw new Error("MONGODB_URI must be a valid mongodb:// or mongodb+srv:// URI");
-  }
-  return `${match[1]}/portfolio${match[2] || ""}`;
-};
+const mongoUri = process.env.MONGODB_URI?.trim();
+const isProduction = process.env.NODE_ENV === "production";
 
-const mongoUri =
-  process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/portfolio";
-const normalizedMongoUri = normalizeMongoUri(mongoUri);
-
-mongoose
-  .connect(normalizedMongoUri, {
-    dbName: "portfolio",
-  })
-  .then(() => {
-    console.log("✅ MongoDB Connected");
-    console.log("✅ Database: portfolio");
-  })
-  .catch((err) => {
-    console.error("❌ MongoDB Connection Error:", err.message);
-  });
+if (mongoUri) {
+  mongoose
+    .connect(mongoUri, {
+      dbName: "portfolio",
+      serverSelectionTimeoutMS: 10000,
+    })
+    .then(() => {
+      console.log("✅ MongoDB Connected");
+      console.log("✅ Database: portfolio");
+    })
+    .catch((err) => {
+      console.error("❌ MongoDB Connection Error:", err.message);
+    });
+} else if (isProduction) {
+  console.error("❌ MONGODB_URI is missing; contact messages cannot be stored.");
+} else {
+  mongoose
+    .connect("mongodb://127.0.0.1:27017/portfolio", {
+      dbName: "portfolio",
+      serverSelectionTimeoutMS: 10000,
+    })
+    .then(() => {
+      console.log("✅ MongoDB Connected");
+      console.log("✅ Database: portfolio");
+    })
+    .catch((err) => {
+      console.error("❌ MongoDB Connection Error:", err.message);
+    });
+}
 
 // Contact Schema
 const contactSchema = new mongoose.Schema({
@@ -125,10 +132,11 @@ const escapeHtml = (value) =>
 
 // Routes
 app.get("/api/health", (req, res) => {
-  res.json({
-    status: "OK",
-    message: "Portfolio API running 🚀",
-    databaseStatus: getDatabaseStatus(),
+  const databaseStatus = getDatabaseStatus();
+  res.status(databaseStatus === "connected" ? 200 : 503).json({
+    status: databaseStatus === "connected" ? "OK" : "ERROR",
+    message: "Portfolio API running",
+    databaseStatus,
     emailNotificationsConfigured: hasSmtpCredentials(),
     emailNotificationsStatus,
   });

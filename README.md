@@ -159,7 +159,7 @@ Set the frontend build environment variable `REACT_APP_API_URL` to the backend's
 ```
 Configure the backend service with `server` as its root directory, `npm install` as its build command, and `npm start` as its start command. Set:
 
-- `MONGODB_URI` to your MongoDB Atlas connection string; the local MongoDB fallback is only for development.
+- `MONGODB_URI` to your MongoDB Atlas connection string; it is required in production. The local MongoDB fallback is only for development.
 - `CLIENT_URL` to the exact public frontend origin, such as `https://your-site.onrender.com`.
 - `SMTP_USER`, `SMTP_PASS`, and optionally `OWNER_EMAIL` for email notifications.
 
