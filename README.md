@@ -149,12 +149,20 @@ cd client
 npm run build
 # Deploy the build/ folder to Vercel
 ```
+Set the frontend build environment variable `REACT_APP_API_URL` to the backend's public base URL (for example, `https://your-api.onrender.com`) and redeploy after changing it. The URL must not include `/api`.
 
 ### Railway / Render (Backend)
 ```bash
 # Set environment variables in dashboard
 # Deploy server/ folder
 ```
+Configure the backend service with `server` as its root directory, `npm install` as its build command, and `npm start` as its start command. Set:
+
+- `MONGODB_URI` to your MongoDB Atlas connection string; the local MongoDB fallback is only for development.
+- `CLIENT_URL` to the exact public frontend origin, such as `https://your-site.onrender.com`.
+- `SMTP_USER`, `SMTP_PASS`, and optionally `OWNER_EMAIL` for email notifications.
+
+Check `https://your-api.onrender.com/api/health` after deployment. `databaseStatus` must be `connected` for contact messages to save. Email notifications are separate; an SMTP issue does not prevent a message from being saved.
 
 ### MongoDB Atlas (Database)
 ```

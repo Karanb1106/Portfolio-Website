@@ -32,6 +32,13 @@ const contactSchema = new mongoose.Schema({
 });
 const Contact = mongoose.model('Contact', contactSchema);
 
+const getDatabaseStatus = () => ({
+  0: 'disconnected',
+  1: 'connected',
+  2: 'connecting',
+  3: 'disconnecting'
+}[mongoose.connection.readyState] || 'unknown');
+
 const hasSmtpCredentials = () => {
   const user = process.env.SMTP_USER?.trim();
   const pass = process.env.SMTP_PASS?.trim();
@@ -88,6 +95,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
     message: 'Portfolio API running 🚀',
+    databaseStatus: getDatabaseStatus(),
     emailNotificationsConfigured: hasSmtpCredentials(),
     emailNotificationsStatus
   });
@@ -104,6 +112,12 @@ app.post('/api/contact', async (req, res) => {
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       return res.status(400).json({ success: false, message: 'Please enter a valid email address' });
+    }
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        success: false,
+        message: 'Message storage is temporarily unavailable. Please try again later.'
+      });
     }
 
     const contact = new Contact({
