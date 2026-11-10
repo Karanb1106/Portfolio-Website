@@ -5,7 +5,9 @@ import { toast } from 'react-toastify';
 import axios from 'axios';
 import './Contact.css';
 
-const API_BASE_URL = (process.env.REACT_APP_API_URL || '').replace(/\/+$/, '');
+const API_BASE_URL = process.env.NODE_ENV === 'development'
+  ? ''
+  : (process.env.REACT_APP_API_URL || '').replace(/\/+$/, '');
 
 const socialLinks = [
   {

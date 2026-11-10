@@ -107,6 +107,7 @@ OWNER_EMAIL=your_gmail@gmail.com  # Optional: where to receive emails
 # OR:
 npm run dev
 ```
+The backend loads environment variables from `server/.env`, including when `npm run dev` is started from the repository root. In local development, the contact form uses the CRA proxy to reach `http://localhost:5000`; in production, it uses `REACT_APP_API_URL`.
 
 - 🌐 Frontend: http://localhost:3000
 - 🔙 Backend: http://localhost:5000
@@ -161,6 +162,8 @@ Configure the backend service with `server` as its root directory, `npm install`
 - `MONGODB_URI` to your MongoDB Atlas connection string; the local MongoDB fallback is only for development.
 - `CLIENT_URL` to the exact public frontend origin, such as `https://your-site.onrender.com`.
 - `SMTP_USER`, `SMTP_PASS`, and optionally `OWNER_EMAIL` for email notifications.
+
+Use a valid Atlas URI with one slash before the database path (for example, `mongodb+srv://<user>:<encoded-password>@<cluster-host>/portfolio?retryWrites=true&w=majority`). The backend normalizes the database path to `portfolio` while preserving URI query options. In Atlas, confirm the database user has read/write access and the Render service can reach the cluster through Network Access.
 
 Check `https://your-api.onrender.com/api/health` after deployment. `databaseStatus` must be `connected` for contact messages to save. Email notifications are separate; an SMTP issue does not prevent a message from being saved.
 
