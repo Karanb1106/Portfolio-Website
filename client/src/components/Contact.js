@@ -47,6 +47,10 @@ const Contact = () => {
       toast.error('Please fill in all fields.');
       return;
     }
+    if (process.env.NODE_ENV === 'production' && !API_BASE_URL) {
+      toast.error('Contact form is not connected to the backend. Set REACT_APP_API_URL to your deployed API URL and rebuild the frontend.');
+      return;
+    }
     setSending(true);
     try {
       const res = await axios.post(`${API_BASE_URL}/api/contact`, form);
@@ -57,7 +61,16 @@ const Contact = () => {
       }
       setForm({ name: '', email: '', subject: '', message: '' });
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Could not save your message. Please try again.');
+      const errorMessage = err.response?.data?.message;
+      if (errorMessage) {
+        toast.error(errorMessage);
+      } else if (!err.response) {
+        toast.error('Unable to reach the contact service. Check that the backend is running and that its CLIENT_URL allows this website.');
+      } else if (err.response.status === 404) {
+        toast.error('The contact API was not found. Check that REACT_APP_API_URL points to the backend URL without /api, then rebuild the frontend.');
+      } else {
+        toast.error(`The contact service returned an unexpected error (${err.response.status}). Please try again later.`);
+      }
     } finally {
       setSending(false);
     }
