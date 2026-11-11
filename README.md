@@ -26,7 +26,7 @@
 | Frontend | React.js 18, CSS3, Framer concepts |
 | Backend | Node.js, Express.js |
 | Database | MongoDB + Mongoose |
-| Email | Nodemailer |
+| Email | Resend API |
 | Animations | react-type-animation, react-intersection-observer |
 | Styling | Custom CSS with CSS Variables |
 
@@ -96,9 +96,9 @@ cp server/.env.example server/.env
 PORT=5000
 MONGODB_URI=mongodb://localhost:27017/portfolio
 CLIENT_URL=http://localhost:3000
-SMTP_USER=your_gmail@gmail.com    # Optional: for email notifications
-SMTP_PASS=your_16_character_google_app_password  # Gmail App Password, not your account password
-OWNER_EMAIL=your_gmail@gmail.com  # Optional: where to receive emails
+RESEND_API_KEY=re_...             # Optional: Resend API key for email notifications
+OWNER_EMAIL=your_email@example.com # Inbox that should receive contact notifications
+RESEND_FROM="Portfolio Website <onboarding@resend.dev>" # Optional: use your verified sender domain
 ```
 
 ### Step 5: Start Development
@@ -161,11 +161,11 @@ Configure the backend service with `server` as its root directory, `npm install`
 
 - `MONGODB_URI` to your MongoDB Atlas connection string; it is required in production. The local MongoDB fallback is only for development.
 - `CLIENT_URL` to the exact public frontend origin, such as `https://your-site.onrender.com`.
-- `SMTP_USER`, `SMTP_PASS`, and optionally `OWNER_EMAIL` for email notifications.
+- `RESEND_API_KEY` and `OWNER_EMAIL` for email notifications. Set `RESEND_FROM` if you have verified a sender domain in Resend.
 
 Use a valid Atlas URI with one slash before the database path (for example, `mongodb+srv://<user>:<encoded-password>@<cluster-host>/portfolio?retryWrites=true&w=majority`). The backend normalizes the database path to `portfolio` while preserving URI query options. In Atlas, confirm the database user has read/write access and the Render service can reach the cluster through Network Access.
 
-Check `https://your-api.onrender.com/api/health` after deployment. `databaseStatus` must be `connected` for contact messages to save. Email notifications are separate; an SMTP issue does not prevent a message from being saved.
+Check `https://your-api.onrender.com/api/health` after deployment. `databaseStatus` must be `connected` for contact messages to save. Email notifications are separate; an email delivery issue does not prevent a message from being saved.
 
 ### MongoDB Atlas (Database)
 ```
@@ -176,17 +176,16 @@ Check `https://your-api.onrender.com/api/health` after deployment. `databaseStat
 
 ## 📧 Contact Form Setup (Email Notifications)
 
-1. Enable 2-Step Verification on the Gmail account used for SMTP.
-2. Generate an App Password under Google Account → Security → App passwords.
-3. Set `SMTP_USER` to that Gmail address and `SMTP_PASS` to the generated 16-character App Password in `server/.env` (not the regular Gmail password). Spaces in the copied password are accepted.
-4. Set `OWNER_EMAIL` to the inbox that should receive contact notifications.
-5. Restart the backend after editing `.env`:
+1. Create a Resend account and generate an API key.
+2. Set `RESEND_API_KEY` and `OWNER_EMAIL` in `server/.env` (and in the deployed backend's environment settings).
+3. For production delivery, verify your sending domain in Resend and set `RESEND_FROM` to a sender address on that domain. Resend's `onboarding@resend.dev` sender is suitable for testing and has account restrictions.
+4. Restart the backend after editing `.env`:
    ```
    cd server
    npm run dev
    ```
 
-The contact form always saves submitted messages to MongoDB. If SMTP is missing or Gmail rejects the credentials, the site reports that the email notification was not delivered instead of showing a false send confirmation. A Gmail `535-5.7.8` response means the SMTP account or App Password still needs to be corrected; normal account passwords cannot be used for this setup. Check `http://localhost:5000/api/health`: `emailNotificationsConfigured` should be `true` and `emailNotificationsStatus` should be `ready` after setting a real Gmail address and App Password. Never paste the App Password into the website or chat.
+The contact form always saves submitted messages to MongoDB. If Resend is not configured or rejects the request, the site reports that the email notification was not delivered instead of showing a false send confirmation. Check `http://localhost:5000/api/health`: `emailNotificationsConfigured` should be `true` after setting `RESEND_API_KEY` and `OWNER_EMAIL`. Never paste the API key into the website or chat.
 
 ---
 

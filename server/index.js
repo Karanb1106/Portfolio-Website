@@ -1,7 +1,6 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const nodemailer = require("nodemailer");
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
@@ -68,54 +67,45 @@ const getDatabaseStatus = () =>
     3: "disconnecting",
   })[mongoose.connection.readyState] || "unknown";
 
-const hasSmtpCredentials = () => {
-  const user = process.env.SMTP_USER?.trim();
-  const pass = process.env.SMTP_PASS?.trim();
-  return Boolean(
-    user && pass && !user.startsWith("your_") && !pass.startsWith("your_"),
-  );
-};
+const resendApiKey = process.env.RESEND_API_KEY?.trim();
+const ownerEmail = process.env.OWNER_EMAIL?.trim();
+const resendFrom =
+  process.env.RESEND_FROM?.trim() || "Portfolio Website <onboarding@resend.dev>";
+const hasEmailConfiguration = () => Boolean(resendApiKey && ownerEmail);
+let emailNotificationsStatus = hasEmailConfiguration()
+  ? "configured"
+  : "not_configured";
 
-const smtpTransporter = hasSmtpCredentials()
-  ? nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      auth: {
-        user: process.env.SMTP_USER.trim(),
-        pass: process.env.SMTP_PASS.replace(/\s+/g, ""),
-      },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000,
-    })
-  : null;
-
-let emailNotificationsStatus = smtpTransporter ? "checking" : "not_configured";
-
-if (smtpTransporter) {
-  smtpTransporter
-    .verify()
-    .then(() => {
-      emailNotificationsStatus = "ready";
-      console.log("✅ Email notifications ready");
-    })
-    .catch((error) => {
-      emailNotificationsStatus =
-        error.code === "EAUTH" || error.responseCode === 535
-          ? "invalid_credentials"
-          : "unavailable";
-      console.warn("❌ Email notification setup failed:", {
-        code: error.code,
-        responseCode: error.responseCode,
-        command: error.command,
-      });
-    });
-} else {
+if (!hasEmailConfiguration()) {
   console.warn(
-    "⚠️ Email notifications are not configured. Set SMTP_USER and SMTP_PASS in server/.env.",
+    "⚠️ Email notifications are not configured. Set RESEND_API_KEY and OWNER_EMAIL.",
   );
 }
+
+const sendContactEmail = async (contact) => {
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: resendFrom,
+      to: [ownerEmail],
+      reply_to: contact.email,
+      subject: `Portfolio Contact: ${contact.subject}`,
+      text: `New message from ${contact.name} (${contact.email})\n\n${contact.message}`,
+      html: `<h3>New message from ${escapeHtml(contact.name)}</h3><p><b>Email:</b> ${escapeHtml(contact.email)}</p><p><b>Message:</b><br>${escapeHtml(contact.message).replace(/\n/g, "<br>")}</p>`,
+    }),
+    signal: AbortSignal.timeout(15000),
+  });
+
+  if (!response.ok) {
+    const error = new Error(`Resend API request failed with status ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
+};
 
 const escapeHtml = (value) =>
   value.replace(
@@ -137,7 +127,7 @@ app.get("/api/health", (req, res) => {
     status: databaseStatus === "connected" ? "OK" : "ERROR",
     message: "Portfolio API running",
     databaseStatus,
-    emailNotificationsConfigured: hasSmtpCredentials(),
+    emailNotificationsConfigured: hasEmailConfiguration(),
     emailNotificationsStatus,
   });
 });
@@ -189,32 +179,21 @@ app.post("/api/contact", async (req, res) => {
 
     let emailSent = false;
     let emailStatus = "not_configured";
-    if (smtpTransporter) {
+    if (hasEmailConfiguration()) {
       try {
-        await smtpTransporter.sendMail({
-          from: process.env.SMTP_USER.trim(),
-          to: process.env.OWNER_EMAIL || process.env.SMTP_USER.trim(),
-          replyTo: contact.email,
-          subject: `Portfolio Contact: ${contact.subject}`,
-          text: `New message from ${contact.name} (${contact.email})\n\n${contact.message}`,
-          html: `<h3>New message from ${escapeHtml(contact.name)}</h3><p><b>Email:</b> ${escapeHtml(contact.email)}</p><p><b>Message:</b><br>${escapeHtml(contact.message).replace(/\n/g, "<br>")}</p>`,
-        });
+        await sendContactEmail(contact);
         emailSent = true;
         emailStatus = "sent";
-        emailNotificationsStatus = "ready";
+        emailNotificationsStatus = "configured";
       } catch (error) {
-        emailStatus =
-          error.code === "EAUTH" || error.responseCode === 535
-            ? "invalid_credentials"
-            : "failed";
+        emailStatus = error.status === 401 ? "invalid_credentials" : "failed";
         emailNotificationsStatus =
           emailStatus === "invalid_credentials"
             ? "invalid_credentials"
             : "unavailable";
         console.error("Contact email notification failed:", {
-          code: error.code,
-          responseCode: error.responseCode,
-          command: error.command,
+          status: error.status,
+          error: error.name,
         });
       }
     }
@@ -226,10 +205,10 @@ app.post("/api/contact", async (req, res) => {
       message: emailSent
         ? "Message sent successfully! I'll get back to you soon."
         : emailStatus === "not_configured"
-          ? "Your message was saved, but email notifications are not configured. Add a real Gmail App Password to server/.env and restart the server."
+          ? "Your message was saved, but email notifications are not configured. Set RESEND_API_KEY and OWNER_EMAIL on the backend."
           : emailStatus === "invalid_credentials"
-            ? "Your message was saved, but Google rejected the SMTP login. Update SMTP_USER and SMTP_PASS with your Gmail address and its 16-character App Password, then restart the server."
-            : "Your message was saved, but Gmail could not deliver the notification. Check the SMTP connection and try again.",
+            ? "Your message was saved, but Resend rejected the API key. Check RESEND_API_KEY in the backend environment."
+            : "Your message was saved, but Resend could not deliver the notification. Check the API key, sender domain, and Resend logs.",
     });
   } catch (error) {
     console.error("Contact error:", error);
